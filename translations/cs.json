@@ -1,0 +1,48 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "ČHMÚ meteorologická stanice",
+                "description": "Zadejte kód stanice ČHMÚ (např. O1KRNO01). Seznam stanic najdete na chmi.cz.",
+                "data": {
+                    "station_id": "Kód stanice"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Nepodařilo se připojit ke stanici",
+            "unknown": "Neočekávaná chyba"
+        },
+        "abort": {
+            "already_configured": "Stanice je již nakonfigurována"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "temperature": {
+                "name": "Teplota"
+            },
+            "humidity": {
+                "name": "Vlhkost"
+            },
+            "pressure": {
+                "name": "Tlak"
+            },
+            "precipitation": {
+                "name": "Srážky"
+            },
+            "sunshine": {
+                "name": "Sluneční svit"
+            },
+            "wind_speed": {
+                "name": "Rychlost větru"
+            },
+            "wind_gust": {
+                "name": "Nárazy větru"
+            },
+            "wind_direction": {
+                "name": "Směr větru"
+            }
+        }
+    }
+}

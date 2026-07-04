@@ -1,0 +1,48 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "CHMI weather station",
+                "description": "Enter the CHMI station code (e.g. O1KRNO01). Find station codes at chmi.cz.",
+                "data": {
+                    "station_id": "Station code"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to station",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Station is already configured"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "temperature": {
+                "name": "Temperature"
+            },
+            "humidity": {
+                "name": "Humidity"
+            },
+            "pressure": {
+                "name": "Pressure"
+            },
+            "precipitation": {
+                "name": "Precipitation"
+            },
+            "sunshine": {
+                "name": "Sunshine duration"
+            },
+            "wind_speed": {
+                "name": "Wind speed"
+            },
+            "wind_gust": {
+                "name": "Wind gust"
+            },
+            "wind_direction": {
+                "name": "Wind direction"
+            }
+        }
+    }
+}
