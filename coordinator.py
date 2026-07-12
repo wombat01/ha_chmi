@@ -9,6 +9,7 @@ import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -47,43 +48,65 @@ class ChmiDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from CHMI API."""
-        timeout = aiohttp.ClientTimeout(total=20)
-        async with aiohttp.ClientSession(
-            headers=BASE_HEADERS, timeout=timeout
-        ) as session:
-            results = await asyncio.gather(
-                _fetch_json(session, URL_STATION_DETAIL.format(self.station_id)),
-                _fetch_json(session, URL_TEMPERATURE.format(self.station_id)),
-                _fetch_json(session, URL_CLIMATE.format(self.station_id)),
-                _fetch_json(session, URL_WIND.format(self.station_id)),
-                _fetch_json(session, URL_PRECIPITATION.format(self.station_id)),
-                return_exceptions=True,
-            )
+        # Sdílená aiohttp session z HA — nezavírá se, session ji spravuje sama.
+        session = async_get_clientsession(self.hass)
+        results = await asyncio.gather(
+            _fetch_json(session, URL_STATION_DETAIL.format(self.station_id)),
+            _fetch_json(session, URL_TEMPERATURE.format(self.station_id)),
+            _fetch_json(session, URL_CLIMATE.format(self.station_id)),
+            _fetch_json(session, URL_WIND.format(self.station_id)),
+            _fetch_json(session, URL_PRECIPITATION.format(self.station_id)),
+            return_exceptions=True,
+        )
 
-            # Ošetření chyb pro každý request zvlášť
-            detail = results[0] if not isinstance(results[0], Exception) else {}
-            temp = results[1] if not isinstance(results[1], Exception) else {}
-            climate = results[2] if not isinstance(results[2], Exception) else {}
-            wind = results[3] if not isinstance(results[3], Exception) else {}
-            precip = results[4] if not isinstance(results[4], Exception) else {}
+        # Ošetření chyb pro každý request zvlášť
+        detail = results[0] if not isinstance(results[0], Exception) else {}
+        temp = results[1] if not isinstance(results[1], Exception) else {}
+        climate = results[2] if not isinstance(results[2], Exception) else {}
+        wind = results[3] if not isinstance(results[3], Exception) else {}
+        precip = results[4] if not isinstance(results[4], Exception) else {}
 
-            if not temp and not climate and not wind and not precip:
-                raise UpdateFailed(f"Failed to fetch any data for {self.station_id}")
+        if not temp and not climate and not wind and not precip:
+            raise UpdateFailed(f"Failed to fetch any data for {self.station_id}")
 
-            if detail and isinstance(detail, dict):
-                self.station_name = _extract_station_name(detail, self.station_id)
-                self.latitude, self.longitude, self.altitude = _extract_coordinates(
-                    detail
-                )
+        if detail and isinstance(detail, dict):
+            self.station_name = _extract_station_name(detail, self.station_id)
+            self.latitude, self.longitude, self.altitude = _extract_coordinates(detail)
 
-            return _merge_data_robust(self.data, temp, climate, wind, precip)
+        return _merge_data_robust(self.data, temp, climate, wind, precip)
 
 
-async def _fetch_json(session: aiohttp.ClientSession, url: str) -> dict[str, Any]:
-    async with asyncio.timeout(15):
-        async with session.get(url) as response:
-            response.raise_for_status()
-            return await response.json()
+# Timeout se předává per-request, protože sdílená session nemá vlastní.
+_REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
+
+
+async def _fetch_json(
+    session: aiohttp.ClientSession, url: str, *, retries: int = 2
+) -> dict[str, Any]:
+    """Fetch JSON with retry on transient errors.
+
+    Retries on network/timeout errors and on 429/5xx responses. The CHMI
+    provider občas vrací data se špatným Content-Type, proto content_type=None.
+    Headers i timeout se předávají per-request kvůli sdílené session.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            async with asyncio.timeout(20):
+                async with session.get(
+                    url, headers=BASE_HEADERS, timeout=_REQUEST_TIMEOUT
+                ) as response:
+                    # 429/5xx vyhodí ClientResponseError → chytne se níž a retryuje
+                    response.raise_for_status()
+                    return await response.json(content_type=None)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            last_exc = exc
+            if attempt < retries:
+                await asyncio.sleep(1.5 * (attempt + 1))
+                continue
+            raise
+    # Nedosažitelné, ale kvůli typové kontrole:
+    raise last_exc if last_exc else RuntimeError("fetch failed")
 
 
 def _extract_station_name(detail: dict[str, Any], station_id: str) -> str:
@@ -155,6 +178,7 @@ def _merge_data_robust(
         "wind_speed": None,
         "wind_gust": None,
         "wind_direction": None,
+        "wind_gust_direction": None,
     }
 
     temp_values = _last_point(temp).get("values") or {}
@@ -182,11 +206,9 @@ def _merge_data_robust(
         "sunshine": _fallback(
             _to_float(
                 _coalesce(
+                    climate_values.get("SSV10M"),
                     climate_values.get("SS"),
                     climate_values.get("SS_10M"),
-                    climate_values.get("SvitSl"),
-                    climate_values.get("SD"),
-                    climate_values.get("SunD"),
                 )
             ),
             "sunshine",
@@ -202,5 +224,9 @@ def _merge_data_robust(
         "wind_direction": _fallback(
             _to_float(_coalesce(wind_values.get("D"), wind_values.get("D_mean"))),
             "wind_direction",
+        ),
+        "wind_gust_direction": _fallback(
+            _to_float(_coalesce(wind_values.get("Dmax"), wind_values.get("D_max"))),
+            "wind_gust_direction",
         ),
     }

@@ -42,6 +42,9 @@
             },
             "wind_direction": {
                 "name": "Směr větru"
+            },
+            "wind_gust_direction": {
+                "name": "Směr nárazů větru"
             }
         }
     }

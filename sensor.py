@@ -25,31 +25,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import ChmiDataCoordinator
 
-# Cardinal wind directions in Czech (16-point compass)
-_CARDINAL_CS = [
-    "S",
-    "SSV",
-    "SV",
-    "VSV",
-    "V",
-    "VJV",
-    "JV",
-    "JJV",
-    "J",
-    "JJZ",
-    "JZ",
-    "ZJZ",
-    "Z",
-    "ZSZ",
-    "SZ",
-    "SSZ",
-]
-
-
-def _degrees_to_cardinal(degrees: float) -> str:
-    return _CARDINAL_CS[round(degrees / 22.5) % 16]
-
-
 @dataclass(frozen=True, kw_only=True)
 class ChmiSensorDescription(SensorEntityDescription):
     pass
@@ -95,6 +70,7 @@ SENSORS: list[ChmiSensorDescription] = [
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        entity_registry_enabled_default=False,
     ),
     ChmiSensorDescription(
         key="wind_speed",
@@ -111,6 +87,7 @@ SENSORS: list[ChmiSensorDescription] = [
         device_class=SensorDeviceClass.WIND_SPEED,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
+        entity_registry_enabled_default=False,
     ),
     ChmiSensorDescription(
         key="wind_direction",
@@ -118,6 +95,17 @@ SENSORS: list[ChmiSensorDescription] = [
         native_unit_of_measurement="\u00b0",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        entity_registry_enabled_default=False,
+        icon="mdi:compass",
+    ),
+    ChmiSensorDescription(
+        key="wind_gust_direction",
+        translation_key="wind_gust_direction",
+        native_unit_of_measurement="\u00b0",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entity_registry_enabled_default=False,
+        icon="mdi:compass",
     ),
 ]
 
@@ -146,10 +134,17 @@ class ChmiSensor(CoordinatorEntity[ChmiDataCoordinator], SensorEntity):
         self._attr_suggested_object_id = f"chmi_{station_slug}_{description.key}"
 
     @property
-    def native_value(self) -> float | str | None:
-        if self.entity_description.key == "wind_direction_cardinal":
-            val = self.coordinator.data.get("wind_direction")
-            return _degrees_to_cardinal(val) if val is not None else None
+    def available(self) -> bool:
+        """Zůstat dostupný, dokud máme nacachovanou hodnotu.
+
+        Jeden selhaný poll (timeout/429/5xx) tak neudělá díru v grafu —
+        poslední známá hodnota se drží díky fallbacku v koordinátoru.
+        """
+        data = self.coordinator.data
+        return data is not None and data.get(self.entity_description.key) is not None
+
+    @property
+    def native_value(self) -> float | None:
         val = self.coordinator.data.get(self.entity_description.key)
         if val is None:
             return None
