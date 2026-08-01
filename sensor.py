@@ -262,16 +262,17 @@ class ChmiSensor(CoordinatorEntity[ChmiDataCoordinator], SensorEntity):
             "station_id": self.coordinator.station_id,
             "station_name": self.coordinator.station_name,
         }
-        if self.coordinator.latitude is not None:
-            attrs["latitude"] = self.coordinator.latitude
-            attrs["longitude"] = self.coordinator.longitude
-        if self.coordinator.altitude is not None:
-            attrs["altitude"] = self.coordinator.altitude
-
         last = data.get("last_measurement")
         if last is not None:
             attrs["last_measurement"] = last.isoformat()
-        cardinal = data.get(f"{self.entity_description.key}_cardinal")
-        if cardinal is not None:
-            attrs["cardinal"] = cardinal
+
+        # Směr větru visí na entitě rychlosti, aby byl vidět i bez zapnutí
+        # samostatné entity směru.
+        if self.entity_description.key == "wind_speed":
+            degrees = data.get("wind_direction")
+            if degrees is not None:
+                attrs["direction"] = degrees
+            cardinal = data.get("wind_direction_cardinal")
+            if cardinal is not None:
+                attrs["cardinal"] = cardinal
         return attrs

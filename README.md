@@ -28,12 +28,15 @@ detail stanice nikdy netahá.
 | Srážky za 1 h / 24 h | klouzavý úhrn |
 | Srážky dnes | úhrn od místní půlnoci |
 | Sluneční svit za 10 min / dnes | délka svitu (max. 600 s za interval) |
-| Rychlost větru, Nárazy, Směr | poslední hodnoty, směr i jako zkratka růžice v atributu `cardinal` |
+| Rychlost větru, Nárazy, Směr | poslední hodnoty; entita rychlosti nese směr v atributech `direction` (°) a `cardinal` (S, SSV, SV, …), takže samostatnou entitu směru zapínat nemusíš |
 | Nejsilnější náraz za 24 h | maximum z řady |
 | Min./max. teplota za 24 h | extrémy z řady |
 
 Část entit je ve výchozím stavu vypnutá, aby seznam nebyl zahlcený — zapnete je
 v nastavení zařízení.
+
+Všechny entity nesou v atributech `station_id`, `station_name` a čas měření.
+Poloha stanice se do atributů nedává — najdete ji v diagnostice integrace.
 
 ## Proč jsou srážky řešené takhle
 
