@@ -9,21 +9,25 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    DEGREE,
     PERCENTAGE,
+    UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
     UnitOfTime,
+    UnitOfVolumetricFlux,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
-from .coordinator import ChmiDataCoordinator
+from .const import ATTRIBUTION, MAX_DATA_AGE
+from .coordinator import ChmiConfigEntry, ChmiDataCoordinator
+
 
 @dataclass(frozen=True, kw_only=True)
 class ChmiSensorDescription(SensorEntityDescription):
@@ -56,11 +60,70 @@ SENSORS: list[ChmiSensorDescription] = [
         suggested_display_precision=1,
     ),
     ChmiSensorDescription(
+        key="dew_point",
+        translation_key="dew_point",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
+    ChmiSensorDescription(
+        key="apparent_temperature",
+        translation_key="apparent_temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
+    ChmiSensorDescription(
+        key="pressure_trend_3h",
+        translation_key="pressure_trend_3h",
+        # Rozdíl tlaku, ne absolutní hodnota — proto bez device_class.
+        native_unit_of_measurement=UnitOfPressure.HPA,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
+    # Desetiminutový úhrn — hodnota platí jen pro svůj interval, mimo něj je neznámá.
+    ChmiSensorDescription(
         key="precipitation",
         translation_key="precipitation",
-        native_unit_of_measurement="mm",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
         device_class=SensorDeviceClass.PRECIPITATION,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
+    ChmiSensorDescription(
+        key="precipitation_intensity",
+        translation_key="precipitation_intensity",
+        native_unit_of_measurement=UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR,
+        device_class=SensorDeviceClass.PRECIPITATION_INTENSITY,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
+    ChmiSensorDescription(
+        key="precipitation_1h",
+        translation_key="precipitation_1h",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
+    ChmiSensorDescription(
+        key="precipitation_24h",
+        translation_key="precipitation_24h",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+    ),
+    # Denní úhrn počítaný z API řady, takže přežije restart i výpadek pollingu.
+    ChmiSensorDescription(
+        key="precipitation_today",
+        translation_key="precipitation_today",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=1,
     ),
     ChmiSensorDescription(
@@ -71,6 +134,14 @@ SENSORS: list[ChmiSensorDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entity_registry_enabled_default=False,
+    ),
+    ChmiSensorDescription(
+        key="sunshine_today",
+        translation_key="sunshine_today",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=1,
     ),
     ChmiSensorDescription(
         key="wind_speed",
@@ -90,37 +161,65 @@ SENSORS: list[ChmiSensorDescription] = [
         entity_registry_enabled_default=False,
     ),
     ChmiSensorDescription(
+        key="wind_gust_max_24h",
+        translation_key="wind_gust_max_24h",
+        native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
+        device_class=SensorDeviceClass.WIND_SPEED,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+    ),
+    ChmiSensorDescription(
         key="wind_direction",
         translation_key="wind_direction",
-        native_unit_of_measurement="\u00b0",
-        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=DEGREE,
+        device_class=SensorDeviceClass.WIND_DIRECTION,
+        state_class=SensorStateClass.MEASUREMENT_ANGLE,
         suggested_display_precision=0,
         entity_registry_enabled_default=False,
-        icon="mdi:compass",
     ),
     ChmiSensorDescription(
         key="wind_gust_direction",
         translation_key="wind_gust_direction",
-        native_unit_of_measurement="\u00b0",
-        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=DEGREE,
+        device_class=SensorDeviceClass.WIND_DIRECTION,
+        state_class=SensorStateClass.MEASUREMENT_ANGLE,
         suggested_display_precision=0,
         entity_registry_enabled_default=False,
-        icon="mdi:compass",
+    ),
+    ChmiSensorDescription(
+        key="temperature_min_24h",
+        translation_key="temperature_min_24h",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+    ),
+    ChmiSensorDescription(
+        key="temperature_max_24h",
+        translation_key="temperature_max_24h",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
     ),
 ]
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ChmiConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: ChmiDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities(ChmiSensor(coordinator, desc) for desc in SENSORS)
 
 
 class ChmiSensor(CoordinatorEntity[ChmiDataCoordinator], SensorEntity):
     _attr_has_entity_name = True
+    _attr_attribution = ATTRIBUTION
 
     def __init__(
         self,
@@ -135,39 +234,30 @@ class ChmiSensor(CoordinatorEntity[ChmiDataCoordinator], SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Zůstat dostupný, dokud máme nacachovanou hodnotu.
+        """Dostupné, dokud máme hodnotu a stanice není dlouho zticha.
 
-        Jeden selhaný poll (timeout/429/5xx) tak neudělá díru v grafu —
-        poslední známá hodnota se drží díky fallbacku v koordinátoru.
+        Jeden selhaný poll neudělá díru v grafu (okamžité veličiny se drží
+        z minula), ale mlčící stanice se po MAX_DATA_AGE přizná.
         """
         data = self.coordinator.data
-        return data is not None and data.get(self.entity_description.key) is not None
+        if not data or data.get(self.entity_description.key) is None:
+            return False
+        last = data.get("last_measurement")
+        if last is not None and dt_util.utcnow() - last > MAX_DATA_AGE:
+            return False
+        return True
 
     @property
     def native_value(self) -> float | None:
-        val = self.coordinator.data.get(self.entity_description.key)
-        if val is None:
-            return None
-        if self.entity_description.key == "precipitation":
-            return round(val, 2)
-        return round(val, 1)
+        return self.coordinator.data.get(self.entity_description.key)
 
     @property
     def device_info(self) -> DeviceInfo:
-        station_slug = (
-            f"{self.coordinator.station_id.lower()}-"
-            f"{self.coordinator.station_name.lower().replace(' ', '-')}"
-        )
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.station_id)},
-            name=self.coordinator.station_name,
-            manufacturer="ČHMÚ",
-            model=self.coordinator.station_id,
-            configuration_url=f"https://www.chmi.cz/w/{station_slug}",
-        )
+        return self.coordinator.device_info
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        data = self.coordinator.data or {}
         attrs: dict[str, Any] = {
             "station_id": self.coordinator.station_id,
             "station_name": self.coordinator.station_name,
@@ -177,4 +267,11 @@ class ChmiSensor(CoordinatorEntity[ChmiDataCoordinator], SensorEntity):
             attrs["longitude"] = self.coordinator.longitude
         if self.coordinator.altitude is not None:
             attrs["altitude"] = self.coordinator.altitude
+
+        last = data.get("last_measurement")
+        if last is not None:
+            attrs["last_measurement"] = last.isoformat()
+        cardinal = data.get(f"{self.entity_description.key}_cardinal")
+        if cardinal is not None:
+            attrs["cardinal"] = cardinal
         return attrs

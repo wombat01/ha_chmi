@@ -10,6 +10,7 @@
             }
         },
         "error": {
+            "invalid_station": "Stanice s tímto kódem neexistuje",
             "cannot_connect": "Nepodařilo se připojit ke stanici",
             "unknown": "Neočekávaná chyba"
         },
@@ -28,11 +29,35 @@
             "pressure": {
                 "name": "Tlak"
             },
+            "dew_point": {
+                "name": "Rosný bod"
+            },
+            "apparent_temperature": {
+                "name": "Pocitová teplota"
+            },
+            "pressure_trend_3h": {
+                "name": "Tendence tlaku za 3 h"
+            },
             "precipitation": {
-                "name": "Srážky"
+                "name": "Srážky za 10 min"
+            },
+            "precipitation_intensity": {
+                "name": "Intenzita srážek"
+            },
+            "precipitation_1h": {
+                "name": "Srážky za 1 h"
+            },
+            "precipitation_24h": {
+                "name": "Srážky za 24 h"
+            },
+            "precipitation_today": {
+                "name": "Srážky dnes"
             },
             "sunshine": {
-                "name": "Sluneční svit"
+                "name": "Sluneční svit za 10 min"
+            },
+            "sunshine_today": {
+                "name": "Sluneční svit dnes"
             },
             "wind_speed": {
                 "name": "Rychlost větru"
@@ -40,11 +65,20 @@
             "wind_gust": {
                 "name": "Nárazy větru"
             },
+            "wind_gust_max_24h": {
+                "name": "Nejsilnější náraz za 24 h"
+            },
             "wind_direction": {
                 "name": "Směr větru"
             },
             "wind_gust_direction": {
                 "name": "Směr nárazů větru"
+            },
+            "temperature_min_24h": {
+                "name": "Minimální teplota za 24 h"
+            },
+            "temperature_max_24h": {
+                "name": "Maximální teplota za 24 h"
             }
         }
     }
