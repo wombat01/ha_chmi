@@ -23,12 +23,18 @@ POLL_MINUTES = [1, 11, 21, 31, 41, 51]
 POLL_SECOND = 30
 # Když se publikace opozdí, poslední bod je při dotazu o deset minut starší než
 # obvykle — pak dotaz jednou zopakujeme.
-EXPECTED_MAX_AGE = timedelta(minutes=15)
+EXPECTED_MAX_AGE = timedelta(minutes=25)
 STALE_RETRY_DELAY = 180
 
 # Do jakého stáří považujeme poslední bod za "aktuální desetiminutovku".
 # Kratší okno by u zpožděné publikace zbytečně mazalo platný úhrn srážek.
-FRESH_WINDOW = timedelta(minutes=30)
+#
+# Zpoždění se stanici od stanice liší a kolísá i u jedné stanice. Měřeno:
+# P1PKAR01 publikuje za 10–11 min, O1KRNO01 za 10–21 min (a občas vydá dva body
+# naráz). Poslední bod tedy stárne až na ~31 minut, než dorazí další. Původních
+# 30 minut leželo přesně na téhle hranici a intenzita srážek náhodně vypadávala
+# do unavailable, zatímco ostatní veličiny se držely přes _CARRY_FORWARD.
+FRESH_WINDOW = timedelta(minutes=45)
 # Po jak dlouhém tichu stanice prohlásíme entity za nedostupné.
 MAX_DATA_AGE = timedelta(hours=2)
 

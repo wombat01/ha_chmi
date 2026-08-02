@@ -23,14 +23,13 @@ detail stanice nikdy netahá.
 | Rosný bod | dopočítáno (Magnusova aproximace) |
 | Pocitová teplota | dopočítáno (Apparent Temperature) |
 | Tendence tlaku za 3 h | rozdíl oproti hodnotě před třemi hodinami |
-| Srážky za 10 min | úhrn poslední desetiminutovky |
-| Intenzita srážek | tentýž úhrn přepočtený na mm/h |
+| Intenzita srážek | úhrn poslední desetiminutovky přepočtený na mm/h |
 | Srážky za 1 h / 24 h | klouzavý úhrn |
 | Srážky dnes | úhrn od místní půlnoci |
-| Sluneční svit za 10 min / dnes | délka svitu (max. 600 s za interval) |
+| Sluneční svit dnes | délka svitu od místní půlnoci |
 | Rychlost větru, Nárazy, Směr | poslední hodnoty; entita rychlosti nese směr v atributech `direction` (°) a `cardinal` (S, SSV, SV, …), takže samostatnou entitu směru zapínat nemusíš |
 | Nejsilnější náraz za 24 h | maximum z řady |
-| Min./max. teplota za 24 h | extrémy z řady |
+| Min./max. teplota dnes | extrémy od místní půlnoci |
 
 Část entit je ve výchozím stavu vypnutá, aby seznam nebyl zahlcený — zapnete je
 v nastavení zařízení.
@@ -42,10 +41,10 @@ Poloha stanice se do atributů nedává — najdete ji v diagnostice integrace.
 
 `SRA10M` je **úhrn za deset minut**, ne okamžitá hodnota. Proto:
 
-- entita *Srážky za 10 min* platí jen pro svůj interval. Když stanice mlčí déle
-  než 25 minut, přejde do stavu `unavailable` místo aby držela starou hodnotu —
-  jinak by každý další polling „napršel“ znovu a `utility_meter` nebo
-  `integration` by sčítaly déšť, který nespadl;
+- entita *Intenzita srážek* platí jen pro svůj interval. Když je poslední bod
+  starší než `FRESH_WINDOW`, přejde do stavu `unavailable` místo aby držela
+  starou hodnotu — jinak by každý další polling „napršel“ znovu a
+  `utility_meter` nebo `integration` by sčítaly déšť, který nespadl;
 - kumulativní entity (1 h, 24 h, dnes) se počítají **z celé řady vrácené API**
   (pokrývá zhruba 48 hodin), ne z historie Home Assistantu. Přežijí tak restart
   i výpadek spojení.

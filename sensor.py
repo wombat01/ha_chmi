@@ -83,15 +83,9 @@ SENSORS: list[ChmiSensorDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
     ),
-    # Desetiminutový úhrn — hodnota platí jen pro svůj interval, mimo něj je neznámá.
-    ChmiSensorDescription(
-        key="precipitation",
-        translation_key="precipitation",
-        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
-        device_class=SensorDeviceClass.PRECIPITATION,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=1,
-    ),
+    # Desetiminutový úhrn sám o sobě entitu nemá — je to tatáž veličina jako
+    # intenzita srážek, jen v mm/10 min. Zůstává interně v datech (živí intenzitu
+    # a je vidět v diagnostice).
     ChmiSensorDescription(
         key="precipitation_intensity",
         translation_key="precipitation_intensity",
@@ -125,15 +119,6 @@ SENSORS: list[ChmiSensorDescription] = [
         device_class=SensorDeviceClass.PRECIPITATION,
         state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=1,
-    ),
-    ChmiSensorDescription(
-        key="sunshine",
-        translation_key="sunshine",
-        native_unit_of_measurement=UnitOfTime.SECONDS,
-        device_class=SensorDeviceClass.DURATION,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        entity_registry_enabled_default=False,
     ),
     ChmiSensorDescription(
         key="sunshine_today",
@@ -187,23 +172,29 @@ SENSORS: list[ChmiSensorDescription] = [
         suggested_display_precision=0,
         entity_registry_enabled_default=False,
     ),
+    # Teplotní extrémy jsou jen denní. Klouzavé 24h okno u teploty nefunguje:
+    # maximum by do odpoledne hlásilo včerejší vrchol a minimum by za běžného
+    # denního chodu vycházelo shodně s denním (naměřeno 141 z 141 vzorků), jinak
+    # by ukazovalo včerejší chladno. U nárazů větru a srážek klouzavé okno smysl
+    # dává — ty se na denní chod nevážou.
+    # Přes název „today“ je to MEASUREMENT, ne TOTAL_INCREASING —
+    # dlouhodobá statistika má u teploty ukládat min/průměr/max za hodinu,
+    # kdežto TOTAL_INCREASING by z ní počítal nesmyslný kumulativní součet.
     ChmiSensorDescription(
-        key="temperature_min_24h",
-        translation_key="temperature_min_24h",
+        key="temperature_min_today",
+        translation_key="temperature_min_today",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
-        entity_registry_enabled_default=False,
     ),
     ChmiSensorDescription(
-        key="temperature_max_24h",
-        translation_key="temperature_max_24h",
+        key="temperature_max_today",
+        translation_key="temperature_max_today",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
-        entity_registry_enabled_default=False,
     ),
 ]
 

@@ -38,9 +38,6 @@
             "pressure_trend_3h": {
                 "name": "Pressure trend 3 h"
             },
-            "precipitation": {
-                "name": "Precipitation last 10 min"
-            },
             "precipitation_intensity": {
                 "name": "Precipitation intensity"
             },
@@ -52,9 +49,6 @@
             },
             "precipitation_today": {
                 "name": "Precipitation today"
-            },
-            "sunshine": {
-                "name": "Sunshine duration last 10 min"
             },
             "sunshine_today": {
                 "name": "Sunshine duration today"
@@ -74,11 +68,11 @@
             "wind_gust_direction": {
                 "name": "Wind gust direction"
             },
-            "temperature_min_24h": {
-                "name": "Minimum temperature 24 h"
+            "temperature_min_today": {
+                "name": "Minimum temperature today"
             },
-            "temperature_max_24h": {
-                "name": "Maximum temperature 24 h"
+            "temperature_max_today": {
+                "name": "Maximum temperature today"
             }
         }
     }

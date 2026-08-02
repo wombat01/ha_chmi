@@ -61,8 +61,6 @@ _CARRY_FORWARD = (
     "precipitation_24h",
     "precipitation_today",
     "sunshine_today",
-    "temperature_min_24h",
-    "temperature_max_24h",
     "wind_gust_max_24h",
     "pressure_trend_3h",
 )
@@ -389,6 +387,27 @@ def _sum_today(series: Series, keys: tuple[str, ...]) -> float | None:
     return round(total, 2) if total is not None else None
 
 
+def _extreme_today(
+    series: Series, keys: tuple[str, ...], pick_max: bool
+) -> float | None:
+    """Extrém od místní půlnoci.
+
+    Stejná konvence jako _sum_today: časová značka je konec desetiminutovky,
+    takže bod 00:00 patří ještě předchozímu dni.
+    """
+    today = dt_util.now().date()
+    best: float | None = None
+    for stamp, values in series:
+        if dt_util.as_local(stamp - timedelta(seconds=1)).date() != today:
+            continue
+        value = _pick(values, keys)
+        if value is None:
+            continue
+        if best is None or (value > best if pick_max else value < best):
+            best = value
+    return best
+
+
 def _extreme_window(
     series: Series, keys: tuple[str, ...], start: datetime, pick_max: bool
 ) -> float | None:
@@ -492,6 +511,8 @@ def _build_data(
         "temperature": temperature,
         "humidity": humidity,
         "pressure": pressure,
+        # Desetiminutový úhrn nemá vlastní entitu, ale drží se v datech kvůli
+        # intenzitě níž a kvůli diagnostice.
         "precipitation": precipitation,
         # Desetiminutový úhrn přepočtený na hodinovou intenzitu — to je číslo,
         # se kterým se dá porovnávat „slabý/silný déšť“.
@@ -505,7 +526,6 @@ def _build_data(
             climate, KEYS_PRECIPITATION, now - timedelta(hours=24), now
         ),
         "precipitation_today": _sum_today(climate, KEYS_PRECIPITATION),
-        "sunshine": _pick(climate_values, KEYS_SUNSHINE) if is_fresh else None,
         "sunshine_today": (
             round(sunshine_today / 3600, 2) if sunshine_today is not None else None
         ),
@@ -516,11 +536,16 @@ def _build_data(
         "wind_gust_max_24h": _extreme_window(
             wind, KEYS_WIND_GUST, now - timedelta(hours=24), pick_max=True
         ),
-        "temperature_min_24h": _extreme_window(
-            climate, KEYS_TEMPERATURE, now - timedelta(hours=24), pick_max=False
+        # Teplotní extrémy záměrně NEJSOU v _CARRY_FORWARD. Krátce po místní
+        # půlnoci ještě žádný dnešní bod nemusí být zveřejněný (u pomalu
+        # publikujících stanic i půl hodiny) — přenesená hodnota by v tu chvíli
+        # tvrdila, že dnešní maximum je včerejší odpolední vrchol. Radši
+        # unavailable než lež.
+        "temperature_min_today": _extreme_today(
+            climate, KEYS_TEMPERATURE, pick_max=False
         ),
-        "temperature_max_24h": _extreme_window(
-            climate, KEYS_TEMPERATURE, now - timedelta(hours=24), pick_max=True
+        "temperature_max_today": _extreme_today(
+            climate, KEYS_TEMPERATURE, pick_max=True
         ),
         "pressure_trend_3h": pressure_trend,
         "last_measurement": last_measurement,

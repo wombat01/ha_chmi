@@ -38,9 +38,6 @@
             "pressure_trend_3h": {
                 "name": "Tendence tlaku za 3 h"
             },
-            "precipitation": {
-                "name": "Srážky za 10 min"
-            },
             "precipitation_intensity": {
                 "name": "Intenzita srážek"
             },
@@ -52,9 +49,6 @@
             },
             "precipitation_today": {
                 "name": "Srážky dnes"
-            },
-            "sunshine": {
-                "name": "Sluneční svit za 10 min"
             },
             "sunshine_today": {
                 "name": "Sluneční svit dnes"
@@ -74,11 +68,11 @@
             "wind_gust_direction": {
                 "name": "Směr nárazů větru"
             },
-            "temperature_min_24h": {
-                "name": "Minimální teplota za 24 h"
+            "temperature_min_today": {
+                "name": "Minimální teplota dnes"
             },
-            "temperature_max_24h": {
-                "name": "Maximální teplota za 24 h"
+            "temperature_max_today": {
+                "name": "Maximální teplota dnes"
             }
         }
     }

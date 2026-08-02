@@ -4,19 +4,16 @@
             "pressure_trend_3h": {
                 "default": "mdi:gauge"
             },
-            "sunshine": {
-                "default": "mdi:white-balance-sunny"
-            },
             "sunshine_today": {
                 "default": "mdi:white-balance-sunny"
             },
             "wind_gust_max_24h": {
                 "default": "mdi:weather-windy"
             },
-            "temperature_min_24h": {
+            "temperature_min_today": {
                 "default": "mdi:thermometer-low"
             },
-            "temperature_max_24h": {
+            "temperature_max_today": {
                 "default": "mdi:thermometer-high"
             },
             "dew_point": {
