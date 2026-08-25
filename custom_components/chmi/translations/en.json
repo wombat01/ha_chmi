@@ -1,0 +1,79 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "CHMI weather station",
+                "description": "Enter the CHMI station code (e.g. O1KRNO01). Find station codes at chmi.cz.",
+                "data": {
+                    "station_id": "Station code"
+                }
+            }
+        },
+        "error": {
+            "invalid_station": "No station with this code exists",
+            "cannot_connect": "Failed to connect to station",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Station is already configured"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "temperature": {
+                "name": "Temperature"
+            },
+            "humidity": {
+                "name": "Humidity"
+            },
+            "pressure": {
+                "name": "Pressure"
+            },
+            "dew_point": {
+                "name": "Dew point"
+            },
+            "apparent_temperature": {
+                "name": "Apparent temperature"
+            },
+            "pressure_trend_3h": {
+                "name": "Pressure trend 3 h"
+            },
+            "precipitation_intensity": {
+                "name": "Precipitation intensity"
+            },
+            "precipitation_1h": {
+                "name": "Precipitation last hour"
+            },
+            "precipitation_24h": {
+                "name": "Precipitation last 24 h"
+            },
+            "precipitation_today": {
+                "name": "Precipitation today"
+            },
+            "sunshine_today": {
+                "name": "Sunshine duration today"
+            },
+            "wind_speed": {
+                "name": "Wind speed"
+            },
+            "wind_gust": {
+                "name": "Wind gust"
+            },
+            "wind_gust_max_24h": {
+                "name": "Peak wind gust 24 h"
+            },
+            "wind_direction": {
+                "name": "Wind direction"
+            },
+            "wind_gust_direction": {
+                "name": "Wind gust direction"
+            },
+            "temperature_min_today": {
+                "name": "Minimum temperature today"
+            },
+            "temperature_max_today": {
+                "name": "Maximum temperature today"
+            }
+        }
+    }
+}
