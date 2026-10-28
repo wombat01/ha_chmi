@@ -8,5 +8,5 @@
     "documentation": "https://www.chmi.cz",
     "integration_type": "service",
     "iot_class": "cloud_polling",
-    "version": "1.4.1"
+    "version": "1.4.2"
 }
