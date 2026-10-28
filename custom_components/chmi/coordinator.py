@@ -59,10 +59,15 @@ _CARRY_FORWARD = (
     "wind_gust_direction",
     "precipitation_1h",
     "precipitation_24h",
-    "precipitation_today",
-    "sunshine_today",
     "wind_gust_max_24h",
     "pressure_trend_3h",
+)
+# Denní úhrny se přenášejí jen v rámci téhož místního dne. Krátce po půlnoci
+# ještě žádný dnešní bod nemusí být zveřejněný a přenesená hodnota by pak
+# tvrdila, že dnes napršel včerejší úhrn.
+_CARRY_FORWARD_SAME_DAY = (
+    "precipitation_today",
+    "sunshine_today",
 )
 
 Series = list[tuple[datetime, dict[str, Any]]]
@@ -549,11 +554,16 @@ def _build_data(
         ),
         "pressure_trend_3h": pressure_trend,
         "last_measurement": last_measurement,
+        # Místní den, ke kterému patří denní úhrny — viz _CARRY_FORWARD_SAME_DAY.
+        "day": dt_util.now().date().isoformat(),
     }
 
     # Chybějící okamžité hodnoty doplň z minula (výpadek jednoho endpointu).
     if current:
-        for key in _CARRY_FORWARD:
+        carry = _CARRY_FORWARD
+        if current.get("day") == data["day"]:
+            carry += _CARRY_FORWARD_SAME_DAY
+        for key in carry:
             if data.get(key) is None and current.get(key) is not None:
                 data[key] = current[key]
         if data["last_measurement"] is None:
