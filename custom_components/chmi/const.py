@@ -50,6 +50,8 @@ URL_STATION_DETAIL = "https://data-provider.chmi.cz/api/stations/data/meteo/{}"
 URL_CLIMATE = "https://data-provider.chmi.cz/api/graphs/graf.meteo-stanice.klima-10m/{}"
 # vitr-10m přidává navíc nárazy (Fmax, Dmax).
 URL_WIND = "https://data-provider.chmi.cz/api/graphs/graf.meteo-stanice.vitr-10m/{}"
+# Veřejný seznam stanic s kódy — odkaz v konfiguračním dialogu.
+URL_STATION_LIST = "https://www.chmi.cz/namerena-data/umisteni-mericich-stanic/meteorologicke"
 URL_STATION_INIT = (
     "https://data-provider.chmi.cz/api/stations/init/meteo-stanice?ghId={}"
 )

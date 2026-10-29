@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "ČHMÚ meteorologická stanice",
-                "description": "Zadejte kód stanice ČHMÚ (např. O1KRNO01). Seznam stanic najdete na chmi.cz.",
+                "description": "Zadejte kód stanice ČHMÚ (např. O1KRNO01). Kódy stanic najdete v [seznamu meteorologických stanic ČHMÚ]({stations_url}).",
                 "data": {
                     "station_id": "Kód stanice"
                 }

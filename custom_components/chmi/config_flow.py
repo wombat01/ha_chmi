@@ -9,7 +9,13 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 
-from .const import CONF_STATION_ID, CONF_STATION_NAME, DEFAULT_STATION_ID, DOMAIN
+from .const import (
+    CONF_STATION_ID,
+    CONF_STATION_NAME,
+    DEFAULT_STATION_ID,
+    DOMAIN,
+    URL_STATION_LIST,
+)
 from .coordinator import async_fetch_station_info
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,6 +50,7 @@ class ChmiConfigFlow(ConfigFlow, domain=DOMAIN):
                 {vol.Required(CONF_STATION_ID, default=station_id): str}
             ),
             errors=errors,
+            description_placeholders={"stations_url": URL_STATION_LIST},
         )
 
     async def _async_station_info(

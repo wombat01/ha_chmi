@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "CHMI weather station",
-                "description": "Enter the CHMI station code (e.g. O1KRNO01). Find station codes at chmi.cz.",
+                "description": "Enter the CHMI station code (e.g. O1KRNO01). Station codes are listed on the [list of CHMI weather stations]({stations_url}).",
                 "data": {
                     "station_id": "Station code"
                 }
