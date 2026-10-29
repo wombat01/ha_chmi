@@ -5,8 +5,9 @@
         "@wombat01"
     ],
     "config_flow": true,
-    "documentation": "https://www.chmi.cz",
+    "documentation": "https://github.com/wombat01/ha_chmi",
     "integration_type": "service",
     "iot_class": "cloud_polling",
-    "version": "1.4.2"
+    "issue_tracker": "https://github.com/wombat01/ha_chmi/issues",
+    "version": "1.4.3"
 }

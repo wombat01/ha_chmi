@@ -37,6 +37,7 @@ from .const import (
     KEYS_WIND_GUST,
     KEYS_WIND_GUST_DIR,
     KEYS_WIND_SPEED,
+    MAX_DATA_AGE,
     POLL_MINUTES,
     POLL_SECOND,
     STALE_RETRY_DELAY,
@@ -352,11 +353,27 @@ def _pick(values: dict[str, Any], keys: tuple[str, ...]) -> float | None:
     return _to_float(_coalesce(*(values.get(key) for key in keys)))
 
 
-def _latest(series: Series) -> tuple[datetime | None, dict[str, Any]]:
-    if not series:
-        return None, {}
-    stamp, values = series[-1]
-    return stamp, values
+def _latest_stamp(series: Series) -> datetime | None:
+    return series[-1][0] if series else None
+
+
+def _latest_value(
+    series: Series, keys: tuple[str, ...], now: datetime
+) -> tuple[datetime | None, float | None]:
+    """Nejnovější bod, který danou veličinu opravdu obsahuje.
+
+    ČHMÚ občas zveřejní poslední desetiminutovku jen zčásti (např. vlhkost
+    a tlak už jsou, teplota a vítr ještě null). Brát hodnoty jen z posledního
+    bodu by pak po restartu, kdy není z čeho přenášet, nechalo entitu
+    nedostupnou. Starší body než MAX_DATA_AGE se nepoužijí.
+    """
+    for stamp, values in reversed(series):
+        if now - stamp > MAX_DATA_AGE:
+            break
+        value = _pick(values, keys)
+        if value is not None:
+            return stamp, value
+    return None, None
 
 
 def _sum_window(
@@ -482,26 +499,28 @@ def _build_data(
     wind: Series,
     now: datetime,
 ) -> dict[str, Any]:
-    stamp, climate_values = _latest(climate)
-    wind_stamp, wind_values = _latest(wind)
     last_measurement = max(
-        (item for item in (stamp, wind_stamp) if item is not None), default=None
+        (
+            item
+            for item in (_latest_stamp(climate), _latest_stamp(wind))
+            if item is not None
+        ),
+        default=None,
     )
-    # Desetiminutový úhrn platí jen pro svůj interval. Kdyby se přenášel dál,
-    # každý další polling by "napršel" znovu a integrace/utility_meter by sčítaly
-    # déšť, který nespadl.
-    is_fresh = last_measurement is not None and now - last_measurement <= FRESH_WINDOW
 
-    wind_speed = _pick(wind_values, KEYS_WIND_SPEED)
+    def latest(series: Series, keys: tuple[str, ...]) -> float | None:
+        return _latest_value(series, keys, now)[1]
+
+    wind_speed = latest(wind, KEYS_WIND_SPEED)
     if wind_speed is None:
-        wind_speed = _pick(climate_values, KEYS_WIND_SPEED)
-    wind_dir = _pick(wind_values, KEYS_WIND_DIR)
+        wind_speed = latest(climate, KEYS_WIND_SPEED)
+    wind_dir = latest(wind, KEYS_WIND_DIR)
     if wind_dir is None:
-        wind_dir = _pick(climate_values, KEYS_WIND_DIR)
+        wind_dir = latest(climate, KEYS_WIND_DIR)
 
-    temperature = _pick(climate_values, KEYS_TEMPERATURE)
-    humidity = _pick(climate_values, KEYS_HUMIDITY)
-    pressure = _pick(climate_values, KEYS_PRESSURE)
+    temperature = latest(climate, KEYS_TEMPERATURE)
+    humidity = latest(climate, KEYS_HUMIDITY)
+    pressure = latest(climate, KEYS_PRESSURE)
 
     pressure_3h_ago = _value_near(climate, KEYS_PRESSURE, now - timedelta(hours=3))
     pressure_trend = (
@@ -510,7 +529,14 @@ def _build_data(
         else None
     )
     sunshine_today = _sum_today(climate, KEYS_SUNSHINE)
-    precipitation = _pick(climate_values, KEYS_PRECIPITATION) if is_fresh else None
+    # Desetiminutový úhrn platí jen pro svůj interval. Kdyby se přenášel dál,
+    # každý další polling by "napršel" znovu a integrace/utility_meter by sčítaly
+    # déšť, který nespadl. Stáří se měří u bodu, ze kterého úhrn opravdu je.
+    precipitation_stamp, precipitation = _latest_value(
+        climate, KEYS_PRECIPITATION, now
+    )
+    if precipitation_stamp is None or now - precipitation_stamp > FRESH_WINDOW:
+        precipitation = None
 
     data: dict[str, Any] = {
         "temperature": temperature,
@@ -535,9 +561,9 @@ def _build_data(
             round(sunshine_today / 3600, 2) if sunshine_today is not None else None
         ),
         "wind_speed": wind_speed,
-        "wind_gust": _pick(wind_values, KEYS_WIND_GUST),
+        "wind_gust": latest(wind, KEYS_WIND_GUST),
         "wind_direction": wind_dir,
-        "wind_gust_direction": _pick(wind_values, KEYS_WIND_GUST_DIR),
+        "wind_gust_direction": latest(wind, KEYS_WIND_GUST_DIR),
         "wind_gust_max_24h": _extreme_window(
             wind, KEYS_WIND_GUST, now - timedelta(hours=24), pick_max=True
         ),

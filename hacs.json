@@ -1,5 +1,6 @@
 {
   "name": "ČHMÚ",
   "country": "CZ",
+  "homeassistant": "2025.4.0",
   "render_readme": true
 }
