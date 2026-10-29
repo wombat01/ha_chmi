@@ -1,6 +1,9 @@
 {
     "domain": "chmi",
     "name": "ČHMÚ",
+    "categories": [
+        "weather_alerts"
+    ],
     "codeowners": [
         "@wombat01"
     ],
