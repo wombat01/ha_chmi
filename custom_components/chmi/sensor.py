@@ -12,6 +12,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     DEGREE,
     PERCENTAGE,
+    UnitOfLength,
     UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
@@ -196,6 +197,27 @@ SENSORS: list[ChmiSensorDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
     ),
+    # Výška sněhu: z automatu, jinak z ranního denního měření. Stanice bez
+    # sněhoměru ji mají trvale nedostupnou. Pro sníh HA device_class nemá,
+    # DISTANCE je nejbližší a dovolí přepočet jednotek.
+    ChmiSensorDescription(
+        key="snow_depth",
+        translation_key="snow_depth",
+        native_unit_of_measurement=UnitOfLength.CENTIMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+    ),
+    # Vodní hodnota sněhu se měří jen na části stanic a jen jednou denně.
+    ChmiSensorDescription(
+        key="snow_water_equivalent",
+        translation_key="snow_water_equivalent",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entity_registry_enabled_default=False,
+    ),
 ]
 
 
@@ -266,4 +288,13 @@ class ChmiSensor(CoordinatorEntity[ChmiDataCoordinator], SensorEntity):
             cardinal = data.get("wind_direction_cardinal")
             if cardinal is not None:
                 attrs["cardinal"] = cardinal
+
+        # U sněhu je podstatné, kdy a čím se měřil — denní hodnota je ranní.
+        key = self.entity_description.key
+        if key in ("snow_depth", "snow_water_equivalent"):
+            measured = data.get(f"{key}_measured")
+            if measured is not None:
+                attrs["measured"] = measured.isoformat()
+            if key == "snow_depth" and data.get("snow_depth_source") is not None:
+                attrs["source"] = data["snow_depth_source"]
         return attrs

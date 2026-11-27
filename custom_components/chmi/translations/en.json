@@ -73,6 +73,12 @@
             },
             "temperature_max_today": {
                 "name": "Maximum temperature today"
+            },
+            "snow_depth": {
+                "name": "Snow depth"
+            },
+            "snow_water_equivalent": {
+                "name": "Snow water equivalent"
             }
         }
     }

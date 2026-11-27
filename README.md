@@ -40,6 +40,8 @@ Pro víc stanic přidejte integraci znovu.
 | Nárazy větru, Nejsilnější náraz za 24 h        |                                               |    ➖    |
 | Směr větru, Směr nárazů větru                  | ve stupních                                   |    ➖    |
 | Minimální teplota dnes, Maximální teplota dnes | extrémy od půlnoci                            |    ✅    |
+| Výška sněhu                                    | automat po 10 min, jinak ranní měření         |    ✅    |
+| Vodní hodnota sněhu                            | ranní měření, jen některé stanice             |    ➖    |
 
 Entity označené ➖ jsou ve výchozím stavu vypnuté, zapnete je v detailu
 zařízení stanice.
@@ -55,6 +57,11 @@ zařízení stanice.
 - Krátce po půlnoci, než ČHMÚ zveřejní první dnešní měření, jsou denní entity
   nedostupné, aby neukazovaly včerejší hodnoty.
 - Po dvou hodinách bez nových dat se entity označí za nedostupné.
+- _Výška sněhu_ bere desetiminutová data ze sněhoměru, pokud jím stanice
+  disponuje, jinak denní měření v 7:00 SEČ (do jeho zveřejnění platí
+  včerejší). Atribut `source` říká, odkud hodnota je (`automatic`/`daily`),
+  a `measured` kdy byla změřena. Stanice, které sníh neměří, mají entitu
+  trvale nedostupnou.
 
 ## Hlášení chyb
 

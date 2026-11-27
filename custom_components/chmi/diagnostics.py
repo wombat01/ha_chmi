@@ -12,9 +12,13 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     coordinator = entry.runtime_data
     data = dict(coordinator.data or {})
-    last = data.get("last_measurement")
-    if last is not None:
-        data["last_measurement"] = last.isoformat()
+    for key in (
+        "last_measurement",
+        "snow_depth_measured",
+        "snow_water_equivalent_measured",
+    ):
+        if data.get(key) is not None:
+            data[key] = data[key].isoformat()
 
     return {
         "station": {

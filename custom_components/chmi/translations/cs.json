@@ -73,6 +73,12 @@
             },
             "temperature_max_today": {
                 "name": "Maximální teplota dnes"
+            },
+            "snow_depth": {
+                "name": "Výška sněhu"
+            },
+            "snow_water_equivalent": {
+                "name": "Vodní hodnota sněhu"
             }
         }
     }

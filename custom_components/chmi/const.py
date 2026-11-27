@@ -50,6 +50,16 @@ URL_STATION_DETAIL = "https://data-provider.chmi.cz/api/stations/data/meteo/{}"
 URL_CLIMATE = "https://data-provider.chmi.cz/api/graphs/graf.meteo-stanice.klima-10m/{}"
 # vitr-10m přidává navíc nárazy (Fmax, Dmax).
 URL_WIND = "https://data-provider.chmi.cz/api/graphs/graf.meteo-stanice.vitr-10m/{}"
+# Výška sněhu: desetiminutový automat (jen část stanic, klíč SCEa) a denní
+# měření v 7:00 SEČ (SCE, u některých stanic i vodní hodnota SVH). Stanice bez
+# sněhoměru vrací HTTP 404, které se tiše ignoruje.
+URL_SNOW = "https://data-provider.chmi.cz/api/graphs/graf.meteo-stanice.snih-10m/{}"
+URL_SNOW_DAILY = "https://data-provider.chmi.cz/api/graphs/graf.meteo-stanice.snih-dly/{}"
+# Denní bod má časovou značku půlnoci UTC daného dne, měří se ale v 7:00 SEČ
+# (06:00 UTC) — o tolik se značka posouvá, aby atribut ukazoval skutečný čas.
+# Zveřejní se o něco později, do té doby platí včerejší ranní hodnota.
+SNOW_DAILY_OFFSET = timedelta(hours=6)
+SNOW_DAILY_MAX_AGE = timedelta(hours=36)
 # Veřejný seznam stanic s kódy — odkaz v konfiguračním dialogu.
 URL_STATION_LIST = "https://www.chmi.cz/namerena-data/umisteni-mericich-stanic/meteorologicke"
 URL_STATION_INIT = (
@@ -66,6 +76,9 @@ KEYS_WIND_SPEED = ("F", "F_mean")
 KEYS_WIND_GUST = ("Fmax", "F_max")
 KEYS_WIND_DIR = ("D", "D_mean")
 KEYS_WIND_GUST_DIR = ("Dmax", "D_max")
+KEYS_SNOW_DEPTH_AUTO = ("SCEa",)
+KEYS_SNOW_DEPTH = ("SCE",)
+KEYS_SNOW_WATER = ("SVH",)
 
 # Šestnáctidílná růžice v české notaci.
 CARDINALS = (

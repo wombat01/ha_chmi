@@ -24,6 +24,12 @@
             },
             "wind_gust_direction": {
                 "default": "mdi:compass"
+            },
+            "snow_depth": {
+                "default": "mdi:snowflake"
+            },
+            "snow_water_equivalent": {
+                "default": "mdi:snowflake-melt"
             }
         }
     }

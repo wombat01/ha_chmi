@@ -31,6 +31,9 @@ from .const import (
     KEYS_HUMIDITY,
     KEYS_PRECIPITATION,
     KEYS_PRESSURE,
+    KEYS_SNOW_DEPTH,
+    KEYS_SNOW_DEPTH_AUTO,
+    KEYS_SNOW_WATER,
     KEYS_SUNSHINE,
     KEYS_TEMPERATURE,
     KEYS_WIND_DIR,
@@ -40,8 +43,12 @@ from .const import (
     MAX_DATA_AGE,
     POLL_MINUTES,
     POLL_SECOND,
+    SNOW_DAILY_MAX_AGE,
+    SNOW_DAILY_OFFSET,
     STALE_RETRY_DELAY,
     URL_CLIMATE,
+    URL_SNOW,
+    URL_SNOW_DAILY,
     URL_STATION_DETAIL,
     URL_WIND,
 )
@@ -70,6 +77,13 @@ _CARRY_FORWARD_SAME_DAY = (
     "precipitation_today",
     "sunshine_today",
 )
+# Sněhové veličiny se přenášejí, jen dokud jejich vlastní měření nezestárne
+# (klíč -> klíč s časem měření). Plošný přenos by v létě, kdy sněhoměr vrací 404,
+# donekonečna držel poslední zimní hodnotu.
+_CARRY_FORWARD_SNOW = {
+    "snow_depth": "snow_depth_measured",
+    "snow_water_equivalent": "snow_water_equivalent_measured",
+}
 
 Series = list[tuple[datetime, dict[str, Any]]]
 
@@ -168,6 +182,8 @@ class ChmiDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         tasks = [
             _fetch_json(session, URL_CLIMATE.format(self.station_id)),
             _fetch_json(session, URL_WIND.format(self.station_id)),
+            _fetch_json(session, URL_SNOW.format(self.station_id)),
+            _fetch_json(session, URL_SNOW_DAILY.format(self.station_id)),
         ]
         if self._need_detail:
             tasks.append(_fetch_json(session, URL_STATION_DETAIL.format(self.station_id)))
@@ -175,7 +191,9 @@ class ChmiDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         results = await asyncio.gather(*tasks, return_exceptions=True)
         climate = _ok(results[0])
         wind = _ok(results[1])
-        detail = _ok(results[2]) if len(results) > 2 else {}
+        snow = _ok(results[2])
+        snow_daily = _ok(results[3])
+        detail = _ok(results[4]) if len(results) > 4 else {}
 
         if not climate and not wind:
             raise UpdateFailed(f"Failed to fetch any data for {self.station_id}")
@@ -190,7 +208,14 @@ class ChmiDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         climate_series = _parse_series(climate)
         wind_series = _parse_series(wind)
-        data = _build_data(self.data, climate_series, wind_series, now)
+        data = _build_data(
+            self.data,
+            climate_series,
+            wind_series,
+            now,
+            snow=_parse_series(snow),
+            snow_daily=_parse_series(snow_daily),
+        )
 
         self._cancel_retry()
         last = data.get("last_measurement")
@@ -358,17 +383,20 @@ def _latest_stamp(series: Series) -> datetime | None:
 
 
 def _latest_value(
-    series: Series, keys: tuple[str, ...], now: datetime
+    series: Series,
+    keys: tuple[str, ...],
+    now: datetime,
+    max_age: timedelta = MAX_DATA_AGE,
 ) -> tuple[datetime | None, float | None]:
     """Nejnovější bod, který danou veličinu opravdu obsahuje.
 
     ČHMÚ občas zveřejní poslední desetiminutovku jen zčásti (např. vlhkost
     a tlak už jsou, teplota a vítr ještě null). Brát hodnoty jen z posledního
     bodu by pak po restartu, kdy není z čeho přenášet, nechalo entitu
-    nedostupnou. Starší body než MAX_DATA_AGE se nepoužijí.
+    nedostupnou. Starší body než max_age se nepoužijí.
     """
     for stamp, values in reversed(series):
-        if now - stamp > MAX_DATA_AGE:
+        if now - stamp > max_age:
             break
         value = _pick(values, keys)
         if value is not None:
@@ -498,6 +526,8 @@ def _build_data(
     climate: Series,
     wind: Series,
     now: datetime,
+    snow: Series | None = None,
+    snow_daily: Series | None = None,
 ) -> dict[str, Any]:
     last_measurement = max(
         (
@@ -537,6 +567,19 @@ def _build_data(
     )
     if precipitation_stamp is None or now - precipitation_stamp > FRESH_WINDOW:
         precipitation = None
+
+    # Automat má přednost (čerstvější), jinak ranní denní měření.
+    snow_daily = [(stamp + SNOW_DAILY_OFFSET, values) for stamp, values in snow_daily or []]
+    snow_stamp, snow_depth = _latest_value(snow or [], KEYS_SNOW_DEPTH_AUTO, now)
+    snow_source = "automatic" if snow_depth is not None else None
+    if snow_depth is None:
+        snow_stamp, snow_depth = _latest_value(
+            snow_daily, KEYS_SNOW_DEPTH, now, SNOW_DAILY_MAX_AGE
+        )
+        snow_source = "daily" if snow_depth is not None else None
+    swe_stamp, swe = _latest_value(
+        snow_daily, KEYS_SNOW_WATER, now, SNOW_DAILY_MAX_AGE
+    )
 
     data: dict[str, Any] = {
         "temperature": temperature,
@@ -579,6 +622,11 @@ def _build_data(
             climate, KEYS_TEMPERATURE, pick_max=True
         ),
         "pressure_trend_3h": pressure_trend,
+        "snow_depth": snow_depth,
+        "snow_depth_source": snow_source,
+        "snow_depth_measured": snow_stamp,
+        "snow_water_equivalent": swe,
+        "snow_water_equivalent_measured": swe_stamp,
         "last_measurement": last_measurement,
         # Místní den, ke kterému patří denní úhrny — viz _CARRY_FORWARD_SAME_DAY.
         "day": dt_util.now().date().isoformat(),
@@ -594,6 +642,18 @@ def _build_data(
                 data[key] = current[key]
         if data["last_measurement"] is None:
             data["last_measurement"] = current.get("last_measurement")
+        for key, stamp_key in _CARRY_FORWARD_SNOW.items():
+            stamp = current.get(stamp_key)
+            if (
+                data.get(key) is None
+                and current.get(key) is not None
+                and stamp is not None
+                and now - stamp <= SNOW_DAILY_MAX_AGE
+            ):
+                data[key] = current[key]
+                data[stamp_key] = stamp
+                if key == "snow_depth":
+                    data["snow_depth_source"] = current.get("snow_depth_source")
 
     data["dew_point"] = dew_point(data["temperature"], data["humidity"])
     data["apparent_temperature"] = apparent_temperature(
